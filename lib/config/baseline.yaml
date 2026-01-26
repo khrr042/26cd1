@@ -12,7 +12,7 @@ INPUT:
   RE_PROB: 0.5
 
 DATASETS:
-  NAMES: ('market1501')
+  NAMES: ('cityflow')
   ROOT_DIR: './data'
 
 DATALOADER:
