@@ -62,12 +62,19 @@ class CityFlow(BaseImageDataset):
         data = []
         for img_path in img_paths:
             img_name = osp.basename(img_path)
-            pid, camid = map(int, pattern.search(img_name).groups())
+            
+            match = pattern.search(img_name)
+            
+            if match:
+                pid, camid = map(int, match.groups())
+                
+                if is_train:
+                    pid -= 1
+                camid -= 1
 
-            if is_train:
-                pid -= 1
-            camid -= 1
-
-            data.append((img_path, pid, camid))
+                data.append((img_path, pid, camid))
+            else:
+                print(f"Warning: Skipping file with unexpected format: {img_name}")
+                continue
 
         return data
