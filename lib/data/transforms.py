@@ -62,7 +62,7 @@ def build_transforms(cfg, mode=None, is_train=None):
 
     if train:
         transform = T.Compose([
-            T.Resize((h, w), interpolation=Image.BILINEAR),
+            T.Resize((h, w), interpolation=T.InterpolationMode.BILINEAR),
             T.RandomHorizontalFlip(p=cfg.INPUT.PROB),
             T.Pad(cfg.INPUT.PADDING),
             T.RandomCrop((h, w)),
@@ -82,7 +82,7 @@ def build_transforms(cfg, mode=None, is_train=None):
 
     else:
         transform = T.Compose([
-            T.Resize((h, w), interpolation=Image.BILINEAR),
+            T.Resize((h, w), interpolation=T.InterpolationMode.BILINEAR),
             T.ToTensor(),
             normalize
         ])

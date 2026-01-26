@@ -78,18 +78,18 @@ class Baseline(nn.Module):
         self.classifier = nn.Linear(self.in_planes, num_classes, bias=False)
         self.classifier.apply(weights_init_classifier)
 
-def forward(self, x, label=None, return_featmap=False):
-    featmap = self.base(x)
-    if return_featmap:
-        return featmap
+    def forward(self, x, label=None, return_featmap=False):
+        featmap = self.base(x)
+        if return_featmap:
+            return featmap
 
-    global_feat = self.gap(featmap)
-    global_feat = global_feat.flatten(1)
+        global_feat = self.gap(featmap)
+        global_feat = global_feat.flatten(1)
 
-    feat = self.bottleneck(global_feat)
+        feat = self.bottleneck(global_feat)
 
-    if self.training:
-        cls_score = self.classifier(feat)
-        return cls_score, feat
-    else:
-        return feat if self.neck_feat == 'after' else global_feat
+        if self.training:
+            cls_score = self.classifier(feat)
+            return cls_score, feat
+        else:
+            return feat if self.neck_feat == 'after' else global_feat

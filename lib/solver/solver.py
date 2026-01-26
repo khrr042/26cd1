@@ -2,7 +2,7 @@
 import math
 import torch
 from bisect import bisect_right
-
+from torch.optim.swa_utils import SWALR
 
 class WarmupMultiStepLR(torch.optim.lr_scheduler._LRScheduler):
     """Warmup + MultiStepLR"""
@@ -42,10 +42,8 @@ class WarmupCosineLR(torch.optim.lr_scheduler._LRScheduler):
 
     def get_lr(self):
         if self.last_epoch < self.warmup_epochs:
-            # Linear warmup
             return [base_lr * (self.last_epoch + 1) / (self.warmup_epochs + 1e-32) for base_lr in self.base_lrs]
         else:
-            # Cosine annealing
             return [self.eta_min + (base_lr - self.eta_min) *
                     (1 + math.cos(math.pi * (self.last_epoch - self.warmup_epochs) / (self.max_epochs - self.warmup_epochs))) / 2
                     for base_lr in self.base_lrs]
@@ -53,9 +51,8 @@ class WarmupCosineLR(torch.optim.lr_scheduler._LRScheduler):
 
 try:
     from .ranger import Ranger
-    from .swa import SWA
 except ImportError:
-    Ranger, SWA = None, None
+    Ranger = None
 
 
 def make_optimizer(cfg, model):
@@ -72,7 +69,7 @@ def make_optimizer(cfg, model):
             weight_decay = cfg.SOLVER.WEIGHT_DECAY_BIAS
 
         if 'classifier' in key or 'arcface' in key:
-            lr = cfg.SOLVER.BASE_LR * cfg.SOLVER.FC_LR_FACTOR
+            lr = cfg.SOLVER.BASE_LR * getattr(cfg.SOLVER, 'FC_LR_FACTOR', 1.0)
 
         params += [{"params": [value], "lr": lr, "weight_decay": weight_decay}]
 
@@ -81,10 +78,8 @@ def make_optimizer(cfg, model):
     elif cfg.SOLVER.OPTIMIZER_NAME == 'Ranger' and Ranger is not None:
         print('Using Ranger optimizer')
         optimizer = Ranger(params)
-    elif cfg.SOLVER.OPTIMIZER_NAME == 'SWA' and SWA is not None:
-        print('Using SWA optimizer (wraps SGD)')
-        base_opt = torch.optim.SGD(params, momentum=getattr(cfg.SOLVER, 'MOMENTUM', 0.9))
-        optimizer = SWA(base_opt, swa_start=0, swa_freq=1)
+    elif cfg.SOLVER.OPTIMIZER_NAME == 'Adam':
+        optimizer = torch.optim.Adam(params, lr=cfg.SOLVER.BASE_LR, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
     else:
         optimizer = getattr(torch.optim, cfg.SOLVER.OPTIMIZER_NAME)(params)
 
@@ -93,6 +88,10 @@ def make_optimizer(cfg, model):
 
 def make_scheduler(cfg, optimizer):
     lr_type = getattr(cfg.SOLVER, 'LR_SCHEDULER', 'multi_step')
+
+    if lr_type == 'swa':
+        print(f"Using SWA Scheduler with swa_lr: {cfg.SOLVER.SWA_LR}")
+        return SWALR(optimizer, swa_lr=cfg.SOLVER.SWA_LR)
 
     if lr_type == 'warmup_multi_step':
         return WarmupMultiStepLR(
@@ -111,10 +110,11 @@ def make_scheduler(cfg, optimizer):
             eta_min=getattr(cfg.SOLVER, 'ETA_MIN_LR', 1e-7)
         )
     elif lr_type == 'cosine':
+        # T_max를 float에서 int로 수정하여 타입 오류 해결
         return torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
-            T_max=float(cfg.SOLVER.MAX_EPOCHS),
-            eta_min=getattr(cfg.SOLVER, 'ETA_MIN_LR', 0)
+            T_max=int(cfg.SOLVER.MAX_EPOCHS),
+            eta_min=getattr(cfg.SOLVER, 'ETA_MIN_LR', 0.0)
         )
     else:
         return torch.optim.lr_scheduler.MultiStepLR(
