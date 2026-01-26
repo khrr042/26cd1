@@ -1,0 +1,88 @@
+from yacs.config import CfgNode as CN
+
+_C = CN()
+
+# MODEL
+_C.MODEL = CN()
+_C.MODEL.DEVICE = "cuda"
+_C.MODEL.DEVICE_ID = '0'
+_C.MODEL.NAME = 'resnet50_ibn_a'
+_C.MODEL.LAST_STRIDE = 1
+_C.MODEL.PRETRAIN_PATH = ''
+_C.MODEL.PRETRAIN_CHOICE = 'imagenet'
+
+_C.MODEL.NECK = 'bnneck'
+_C.MODEL.IF_WITH_CENTER = 'no'
+_C.MODEL.METRIC_LOSS_TYPE = 'triplet'
+_C.MODEL.IF_LABELSMOOTH = 'on'
+_C.MODEL.ID_LOSS_WEIGHT = 1.0
+_C.MODEL.TRIPLET_LOSS_WEIGHT = 1.0
+
+# Pooling
+_C.MODEL.POOLING_METHOD = 'GeM'
+
+_C.MODEL.ID_LOSS_TYPE = 'softmax'
+_C.MODEL.DROPOUT_PROB = 0.0
+_C.MODEL.EMBEDDING_HEAD = 'bn_dropout_fc'
+_C.MODEL.EMBEDDING_DIM = 2048
+
+# INPUT
+_C.INPUT = CN()
+# Size of the image during training
+_C.INPUT.SIZE_TRAIN = [320, 320]
+# Size of the image during test
+_C.INPUT.SIZE_TEST = [320, 320]
+# Random probability for horizontal filp
+_C.INPUT.PROB = 0.5
+# Random probability for random erasing
+_C.INPUT.RE_PROB = 0.5
+# Values to be used for image normalization
+_C.INPUT.PIXEL_MEAN = [0.485, 0.456, 0.406]
+# Values to be used for image normalization
+_C.INPUT.PIXEL_STD = [0.229, 0.224, 0.225]
+# Values of padding size
+_C.INPUT.PADDING = 10
+
+# DATASETS
+_C.DATASETS = CN()
+_C.DATASETS.NAMES = ('market1501')
+_C.DATASETS.ROOT_DIR = './data'
+
+# DATALOADER
+_C.DATALOADER = CN()
+_C.DATALOADER.NUM_WORKERS = 8
+_C.DATALOADER.SAMPLER = 'softmax_triplet'
+_C.DATALOADER.NUM_INSTANCE = 4
+_C.DATALOADER.BATCH_SIZE = 64
+
+# SOLVER
+_C.SOLVER = CN()
+_C.SOLVER.OPTIMIZER_NAME = "Adam"
+_C.SOLVER.MAX_EPOCHS = 120
+_C.SOLVER.BASE_LR = 0.00035
+_C.SOLVER.BIAS_LR_FACTOR = 1
+_C.SOLVER.MOMENTUM = 0.9
+_C.SOLVER.MARGIN = 0.3
+_C.SOLVER.WEIGHT_DECAY = 0.0005
+_C.SOLVER.WEIGHT_DECAY_BIAS = 0.0005
+_C.SOLVER.GAMMA = 0.1
+_C.SOLVER.STEPS = [40, 70]
+
+_C.SOLVER.WARMUP_FACTOR = 0.01
+_C.SOLVER.WARMUP_ITERS = 10
+_C.SOLVER.WARMUP_METHOD = "linear"
+
+_C.SOLVER.CHECKPOINT_PERIOD = 20
+_C.SOLVER.LOG_PERIOD = 20
+_C.SOLVER.EVAL_PERIOD = 20
+_C.SOLVER.FP16 = True
+
+# TEST
+_C.TEST = CN()
+_C.TEST.IMS_PER_BATCH = 128
+_C.TEST.WEIGHT = ""
+_C.TEST.NECK_FEAT = 'after'
+_C.TEST.FEAT_NORM = 'yes'
+
+# OUTPUT
+_C.OUTPUT_DIR = "./logs/baseline"

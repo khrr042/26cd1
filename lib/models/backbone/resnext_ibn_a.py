@@ -1,0 +1,124 @@
+import math
+import torch
+import torch.nn as nn
+from torch.hub import load_state_dict_from_url
+
+from .mixstyle import MixStyle
+
+__all__ = ['resnext50_ibn_a', 'resnext101_ibn_a', 'resnext152_ibn_a']
+
+
+class IBN(nn.Module):
+    def __init__(self, planes):
+        super().__init__()
+        half = planes // 2
+        self.IN = nn.InstanceNorm2d(half, affine=True)
+        self.BN = nn.BatchNorm2d(planes - half)
+
+    def forward(self, x):
+        x1, x2 = torch.split(x, [x.size(1)//2, x.size(1)-x.size(1)//2], dim=1)
+        return torch.cat((self.IN(x1), self.BN(x2)), dim=1)
+
+
+class Bottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, baseWidth, cardinality, stride=1, downsample=None, ibn=False):
+        super().__init__()
+        D = int(math.floor(planes * (baseWidth / 64)))
+        C = cardinality
+
+        self.conv1 = nn.Conv2d(inplanes, D * C, 1, bias=False)
+        self.bn1 = IBN(D * C) if ibn else nn.BatchNorm2d(D * C)
+
+        self.conv2 = nn.Conv2d(
+            D * C, D * C, 3, stride=stride, padding=1, groups=C, bias=False
+        )
+        self.bn2 = nn.BatchNorm2d(D * C)
+
+        self.conv3 = nn.Conv2d(D * C, planes * self.expansion, 1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
+
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+
+    def forward(self, x):
+        identity = x
+
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.relu(self.bn2(self.conv2(out)))
+        out = self.bn3(self.conv3(out))
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        return self.relu(out + identity)
+
+
+class ResNeXt(nn.Module):
+    def __init__(self, last_stride, baseWidth, cardinality, layers):
+        super().__init__()
+        self.inplanes = 64
+
+        self.conv1 = nn.Conv2d(3, 64, 7, 2, 3, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)
+
+        self.layer1 = self._make_layer(Bottleneck, 64, layers[0], baseWidth, cardinality)
+        self.layer2 = self._make_layer(Bottleneck, 128, layers[1], baseWidth, cardinality, stride=2)
+        self.layer3 = self._make_layer(Bottleneck, 256, layers[2], baseWidth, cardinality, stride=2)
+        self.layer4 = self._make_layer(Bottleneck, 512, layers[3], baseWidth, cardinality, stride=last_stride)
+
+        # ✅ MixStyle (domain-agnostic)
+        self.mixstyle = MixStyle(p=0.5, alpha=0.1)
+
+        self._init_weights()
+
+    def _make_layer(self, block, planes, blocks, baseWidth, cardinality, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion, 1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes * block.expansion),
+            )
+
+        layers = []
+        ibn = planes != 512
+        layers.append(block(self.inplanes, planes, baseWidth, cardinality, stride, downsample, ibn))
+        self.inplanes = planes * block.expansion
+
+        for _ in range(1, blocks):
+            layers.append(block(self.inplanes, planes, baseWidth, cardinality, ibn=ibn))
+
+        return nn.Sequential(*layers)
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+            elif isinstance(m, (nn.BatchNorm2d, nn.InstanceNorm2d)):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        x = self.maxpool(self.relu(self.bn1(self.conv1(x))))
+        x = self.layer1(x)
+        x = self.mixstyle(x)
+        x = self.layer2(x)
+        x = self.mixstyle(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        return x
+
+
+def resnext50_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
+    return ResNeXt(last_stride, baseWidth, cardinality, [3, 4, 6, 3])
+
+
+def resnext101_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
+    return ResNeXt(last_stride, baseWidth, cardinality, [3, 4, 23, 3])
+
+
+def resnext152_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
+    return ResNeXt(last_stride, baseWidth, cardinality, [3, 8, 36, 3])
