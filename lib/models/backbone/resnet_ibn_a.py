@@ -8,7 +8,6 @@ __all__ = [
     'resnet50_ibn_a',
     'resnet101_ibn_a',
     'resnet152_ibn_a',
-    'se_resnet101_ibn_a',
 ]
 
 model_urls = {
@@ -22,12 +21,12 @@ class IBN(nn.Module):
     def __init__(self, planes):
         super().__init__()
         half = planes // 2
-        self.half = half
+        self.half_channel = half
         self.IN = nn.InstanceNorm2d(half, affine=True)
         self.BN = nn.BatchNorm2d(planes - half)
 
     def forward(self, x):
-        x1, x2 = torch.split(x, [self.half, x.size(1) - self.half], dim=1)
+        x1, x2 = torch.split(x, [self.half_channel, x.size(1) - self.half_channel], dim=1)
         return torch.cat((self.IN(x1), self.BN(x2)), dim=1)
 
 
@@ -174,6 +173,31 @@ class ResNet_IBN(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         return x
+
+    def load_param(self, model_path):
+        try:
+            param_dict = torch.load(model_path, map_location='cpu')
+        except Exception as e:
+            print(f"Error loading checkpoint from {model_path}: {e}")
+            return
+
+        if 'state_dict' in param_dict:
+            param_dict = param_dict['state_dict']
+            
+        print(f"Loading pretrained model from {model_path}...")
+        
+        model_dict = self.state_dict()
+        new_state_dict = {k: v for k, v in param_dict.items() if k in model_dict and v.size() == model_dict[k].size()}
+        
+        if len(new_state_dict) == 0:
+             new_state_dict = {k.replace('module.', ''): v for k, v in param_dict.items() if k.replace('module.', '') in model_dict and v.size() == model_dict[k.replace('module.', '')].size()}
+        
+        if len(new_state_dict) > 0:
+            model_dict.update(new_state_dict)
+            self.load_state_dict(model_dict)
+            print(f"Successfully loaded {len(new_state_dict)} layers.")
+        else:
+            print("Warning: No matching layers found in the checkpoint.")
 
 
 def _load_pretrained(model, url):

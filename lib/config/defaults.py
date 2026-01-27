@@ -7,6 +7,7 @@ _C.MODEL = CN()
 _C.MODEL.DEVICE = "cuda"
 _C.MODEL.DEVICE_ID = '0'
 _C.MODEL.NAME = 'resnet50_ibn_a'
+_C.MODEL.MODEL_TYPE = 'baseline'
 _C.MODEL.LAST_STRIDE = 1
 _C.MODEL.PRETRAIN_PATH = ''
 _C.MODEL.PRETRAIN_CHOICE = 'imagenet'

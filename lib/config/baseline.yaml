@@ -13,7 +13,7 @@ INPUT:
 
 DATASETS:
   NAMES: ('cityflow')
-  ROOT_DIR: './data'
+  ROOT_DIR: '/content/drive/MyDrive/MyProject'
 
 DATALOADER:
   SAMPLER: 'softmax_triplet'

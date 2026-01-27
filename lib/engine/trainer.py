@@ -1,5 +1,6 @@
-# tools/train.py
 import os
+import argparse
+import sys
 from typing import List, Optional
 
 import torch
@@ -14,7 +15,7 @@ from lib.models import build_model
 from lib.losses import MomentumAdaptiveLoss
 from lib.solver.solver import make_optimizer, make_scheduler
 from lib.utils.utils import setup_logger
-from hooks import SWAHook, ValidationHook, CheckpointHook
+from lib.engine.hooks import SWAHook, ValidationHook, CheckpointHook
 
 
 class Trainer:
@@ -76,6 +77,7 @@ def do_train(cfg):
     output_dir = cfg.OUTPUT_DIR
     setup_logger("reid_baseline", output_dir, is_train=True)
 
+
     train_loader, val_loader, num_query, num_classes = make_data_loader(cfg)
 
     model: Optional[nn.Module] = build_model(cfg, num_classes)
@@ -99,4 +101,19 @@ def do_train(cfg):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="ReID Baseline Training")
+    parser.add_argument(
+        "--config_file", default="", help="path to config file", type=str
+    )
+    parser.add_argument("opts", help="Modify config options using the command-line", default=None, nargs=argparse.REMAINDER)
+
+    args = parser.parse_args()
+
+    if args.config_file != "":
+        cfg.merge_from_file(args.config_file)
+
+    if args.opts is not None:
+        cfg.merge_from_list(args.opts)
+
+    cfg.freeze()
     do_train(cfg)

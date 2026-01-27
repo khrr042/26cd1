@@ -25,10 +25,7 @@ class MomentumAdaptiveLoss(nn.Module):
             self.metric_loss_func = TripletLoss(cfg.SOLVER.MARGIN)
 
         elif cfg.MODEL.METRIC_LOSS_TYPE == 'supconloss':
-            self.metric_loss_func = SupConLoss(
-                num_ids=int(cfg.SOLVER.IMS_PER_BATCH / cfg.DATALOADER.NUM_INSTANCE),
-                views=cfg.DATALOADER.NUM_INSTANCE
-            )
+            self.metric_loss_func = SupConLoss()
 
         elif cfg.MODEL.METRIC_LOSS_TYPE == 'none':
             self.metric_loss_func = None

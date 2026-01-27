@@ -70,7 +70,6 @@ class ResNeXt(nn.Module):
         self.layer3 = self._make_layer(Bottleneck, 256, layers[2], baseWidth, cardinality, stride=2)
         self.layer4 = self._make_layer(Bottleneck, 512, layers[3], baseWidth, cardinality, stride=last_stride)
 
-        # ✅ MixStyle (domain-agnostic)
         self.mixstyle = MixStyle(p=0.5, alpha=0.1)
 
         self._init_weights()
@@ -110,6 +109,30 @@ class ResNeXt(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         return x
+    
+    def load_param(self, model_path):
+        try:
+            param_dict = torch.load(model_path, map_location='cpu')
+        except Exception as e:
+            print(f"Error loading checkpoint from {model_path}: {e}")
+            return
+
+        if 'state_dict' in param_dict:
+            param_dict = param_dict['state_dict']
+            
+        print(f"Loading pretrained model from {model_path}...")
+        model_dict = self.state_dict()
+        new_state_dict = {k: v for k, v in param_dict.items() if k in model_dict and v.size() == model_dict[k].size()}
+        
+        if len(new_state_dict) == 0:
+             new_state_dict = {k.replace('module.', ''): v for k, v in param_dict.items() if k.replace('module.', '') in model_dict and v.size() == model_dict[k.replace('module.', '')].size()}
+        
+        if len(new_state_dict) > 0:
+            model_dict.update(new_state_dict)
+            self.load_state_dict(model_dict)
+            print(f"Successfully loaded {len(new_state_dict)} layers.")
+        else:
+            print("Warning: No matching layers found in the checkpoint.")
 
 
 def resnext50_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
