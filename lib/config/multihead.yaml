@@ -1,12 +1,14 @@
 MODEL:
   NAME: 'resnext101_ibn_a'
+  MODEL_TYPE: 'baseline_multiheads'
   PRETRAIN_CHOICE: 'imagenet'
   POOLING_METHOD: 'GeM'
   ID_LOSS_TYPE: 'circle'
   ID_LOSS_WEIGHT: 1.0
   TRIPLET_LOSS_WEIGHT: 1.0
   METRIC_LOSS_TYPE: 'triplet'
-  MIXSTYLE_PROB: 0.0
+  MIXSTYLE_PROB: 0.5
+  IF_LABELSMOOTH: 'on'
 
 INPUT:
   SIZE_TRAIN: [320, 320]

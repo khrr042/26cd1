@@ -56,7 +56,10 @@ class Baseline(nn.Module):
                  neck, neck_feat, model_name, pretrain_choice, cfg):
         super().__init__()
 
-        self.base = build_backbone(model_name, last_stride)
+        mixstyle_p = getattr(cfg.MODEL, 'MIXSTYLE_PROB', 0.0)
+        mixstyle_alpha = getattr(cfg.MODEL, 'MIXSTYLE_ALPHA', 0.1)
+
+        self.base = build_backbone(model_name, last_stride, mixstyle_p=mixstyle_p, mixstyle_alpha=mixstyle_alpha)
 
         if pretrain_choice == 'imagenet':
             self.base.load_param(model_path)

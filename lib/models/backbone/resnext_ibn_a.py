@@ -56,7 +56,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNeXt(nn.Module):
-    def __init__(self, last_stride, baseWidth, cardinality, layers):
+    def __init__(self, last_stride, baseWidth, cardinality, layers, mixstyle_p=0.5, mixstyle_alpha=0.1):
         super().__init__()
         self.inplanes = 64
 
@@ -70,7 +70,8 @@ class ResNeXt(nn.Module):
         self.layer3 = self._make_layer(Bottleneck, 256, layers[2], baseWidth, cardinality, stride=2)
         self.layer4 = self._make_layer(Bottleneck, 512, layers[3], baseWidth, cardinality, stride=last_stride)
 
-        self.mixstyle = MixStyle(p=0.5, alpha=0.1)
+        self.mixstyle = MixStyle(p=mixstyle_p, alpha=mixstyle_alpha)
+        self._init_weights()
 
         self._init_weights()
 
@@ -139,9 +140,11 @@ def resnext50_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
     return ResNeXt(last_stride, baseWidth, cardinality, [3, 4, 6, 3])
 
 
-def resnext101_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
-    return ResNeXt(last_stride, baseWidth, cardinality, [3, 4, 23, 3])
-
+def resnext101_ibn_a(last_stride=1, baseWidth=4, cardinality=32, **kwargs):
+    mixstyle_p = kwargs.get('mixstyle_p', 0.0)
+    mixstyle_alpha = kwargs.get('mixstyle_alpha', 0.1)
+    return ResNeXt(last_stride, baseWidth, cardinality, [3, 4, 23, 3],
+                   mixstyle_p=mixstyle_p, mixstyle_alpha=mixstyle_alpha)
 
 def resnext152_ibn_a(last_stride=1, baseWidth=4, cardinality=32):
     return ResNeXt(last_stride, baseWidth, cardinality, [3, 8, 36, 3])
