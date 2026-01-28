@@ -2,12 +2,11 @@ MODEL:
   NAME: 'resnext101_ibn_a'
   PRETRAIN_CHOICE: 'none'
   POOLING_METHOD: 'GeM'
-  ID_LOSS_TYPE: 'circle'
   ID_LOSS_WEIGHT: 1.0
   TRIPLET_LOSS_WEIGHT: 1.0
   METRIC_LOSS_TYPE: 'triplet'
-  MIXSTYLE_PROB: 0.5
-  MALW: True
+  MIXSTYLE_PROB: 0.0
+  MALW: False
 
 INPUT:
   SIZE_TRAIN: [320, 320]
@@ -31,4 +30,4 @@ SOLVER:
   EVAL_PERIOD: 10
   CHECKPOINT_PERIOD: 10
 
-OUTPUT_DIR: './logs/mixstyle'
+OUTPUT_DIR: './logs/malw_off'

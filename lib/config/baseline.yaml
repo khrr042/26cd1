@@ -1,12 +1,13 @@
 MODEL:
   NAME: 'resnext101_ibn_a'
-  PRETRAIN_CHOICE: 'imagenet'
+  PRETRAIN_CHOICE: 'none'
   POOLING_METHOD: 'GeM'
   ID_LOSS_TYPE: 'circle'
   ID_LOSS_WEIGHT: 1.0
   TRIPLET_LOSS_WEIGHT: 1.0
   METRIC_LOSS_TYPE: 'triplet'
   MIXSTYLE_PROB: 0.0
+  MALW: True
 
 INPUT:
   SIZE_TRAIN: [320, 320]
@@ -14,8 +15,8 @@ INPUT:
   RE_PROB: 0.5
 
 DATASETS:
-  NAMES: ('cityflow')
-  ROOT_DIR: '/content/drive/MyDrive'
+  NAMES: ['cityflow']
+  ROOT_DIR: './data'
 
 DATALOADER:
   SAMPLER: 'softmax_triplet'

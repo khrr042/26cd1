@@ -1,7 +1,12 @@
 from .cityflow import CityFlow
+from .veri776 import VeRi776
+from .vehiclex import VehicleX, VehicleXTranslated
 
 __factory = {
     'cityflow': CityFlow,
+    'veri776': VeRi776,
+    'vehiclex': VehicleX,
+    'vehiclex_translated': VehicleXTranslated,
 }
 
 def get_names():

@@ -1,0 +1,43 @@
+MODEL:
+  NAME: 'resnet152'
+  MODEL_TYPE: 'baseline_multiheads'
+  PRETRAIN_CHOICE: 'imagenet'
+  PRETRAIN_PATH: '/content/drive/MyDrive/ReID/pretrained/resnet152.pth'
+  POOLING_METHOD: 'GeM'
+  ID_LOSS_WEIGHT: 1.0
+  TRIPLET_LOSS_WEIGHT: 1.0
+  METRIC_LOSS_TYPE: 'supconloss'
+  MIXSTYLE_PROB: 0.5
+  MIXSTYLE_ALPHA: 0.1
+  MALW: True
+
+INPUT:
+  SIZE_TRAIN: [320, 320]
+  SIZE_TEST: [320, 320]
+  RE_PROB: 0.5
+
+DATASETS:
+  TRAIN_NAMES: ['cityflow', 'vehiclex', 'vehiclex_translated']
+  TEST_NAME: 'cityflow'
+  ROOT_DIR: '/content/ReID_data'
+  VALIDATION_SPLIT_ID: 80
+
+DATALOADER:
+  SAMPLER: 'softmax_triplet'
+  NUM_INSTANCE: 8
+  BATCH_SIZE: 128
+
+SOLVER:
+  OPTIMIZER_NAME: 'Adam'
+  MAX_EPOCHS: 12
+  BASE_LR: 0.00035
+  FP16: True
+  LR_SCHEDULER: 'cosine'
+  FREEZE_BACKBONE_EPOCHS: 1
+  EVAL_PERIOD: 1
+  CHECKPOINT_PERIOD: 1
+
+TEST:
+  FEAT_NORM: 'yes'
+
+OUTPUT_DIR: './logs/paper_full_resnet152'

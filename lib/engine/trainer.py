@@ -45,10 +45,30 @@ class Trainer:
         for hook in self.hooks:
             hook.trainer = self
 
+        self._backbone_frozen = False
+
+    def _set_backbone_trainable(self, trainable: bool):
+        if not hasattr(self.model, "base"):
+            return
+        for p in self.model.base.parameters():
+            p.requires_grad = trainable
+        if trainable:
+            self.model.base.train()
+        else:
+            self.model.base.eval()
+        self._backbone_frozen = not trainable
+
     def train(self):
         max_epochs = self.cfg.SOLVER.MAX_EPOCHS
         for epoch in range(1, max_epochs + 1):
             self.model.train()
+
+            freeze_epochs = getattr(self.cfg.SOLVER, "FREEZE_BACKBONE_EPOCHS", 0)
+            if freeze_epochs > 0:
+                if epoch <= freeze_epochs and not self._backbone_frozen:
+                    self._set_backbone_trainable(False)
+                elif epoch > freeze_epochs and self._backbone_frozen:
+                    self._set_backbone_trainable(True)
             loop = tqdm(self.train_loader, desc=f"Epoch [{epoch}/{max_epochs}]")
             for batch in loop:
                 img, target = batch[0].to(self.device), batch[1].to(self.device)
@@ -84,14 +104,16 @@ def do_train(cfg):
     if model is None:
         raise ValueError("build_model returned None")
 
-    swa_model = AveragedModel(model)
+    swa_model = AveragedModel(model) if getattr(cfg.SOLVER, "USE_SWA", True) else None
 
     loss_func = MomentumAdaptiveLoss(cfg, num_classes)
     optimizer = make_optimizer(cfg, model)
     scheduler = make_scheduler(cfg, optimizer)
 
-    hooks = [
-        SWAHook(swa_model, int(cfg.SOLVER.MAX_EPOCHS * 0.75), train_loader),
+    hooks = []
+    if getattr(cfg.SOLVER, "USE_SWA", True):
+        hooks.append(SWAHook(swa_model, int(cfg.SOLVER.MAX_EPOCHS * 0.75), train_loader))
+    hooks += [
         CheckpointHook(output_dir, interval=getattr(cfg.SOLVER, 'CHECKPOINT_PERIOD', 5)),
         ValidationHook(val_loader, num_query, interval=getattr(cfg.SOLVER, 'EVAL_PERIOD', 5)),
     ]

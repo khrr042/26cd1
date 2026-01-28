@@ -15,6 +15,7 @@ class MomentumAdaptiveLoss(nn.Module):
         self.update_iter_interval = 500
         self.momentum = 0.9
 
+        self.use_malw = getattr(cfg.MODEL, "MALW", True)
         self.ID_LOSS_WEIGHT = cfg.MODEL.ID_LOSS_WEIGHT
         self.METRIC_LOSS_WEIGHT = cfg.MODEL.TRIPLET_LOSS_WEIGHT
 
@@ -50,28 +51,29 @@ class MomentumAdaptiveLoss(nn.Module):
             else:
                 metric_loss = self.metric_loss_func(feat, target)
 
-        self.id_loss_history.append(id_loss.detach().item())
-        self.metric_loss_history.append(metric_loss.detach().item())
+        if self.use_malw:
+            self.id_loss_history.append(id_loss.detach().item())
+            self.metric_loss_history.append(metric_loss.detach().item())
 
-        if len(self.id_loss_history) % self.update_iter_interval == 0:
-            id_std = np.std(self.id_loss_history)
-            metric_std = np.std(self.metric_loss_history)
+            if len(self.id_loss_history) % self.update_iter_interval == 0:
+                id_std = np.std(self.id_loss_history)
+                metric_std = np.std(self.metric_loss_history)
 
-            self.id_loss_history.clear()
-            self.metric_loss_history.clear()
+                self.id_loss_history.clear()
+                self.metric_loss_history.clear()
 
-            if id_std > metric_std:
-                safe_std = max(id_std, 1e-6)
-                new_lambda = 1.0 - (id_std - metric_std) / safe_std
-                self.ID_LOSS_WEIGHT = (
-                    self.momentum * self.ID_LOSS_WEIGHT
-                    + (1 - self.momentum) * new_lambda
-                )
+                if id_std > metric_std:
+                    safe_std = max(id_std, 1e-6)
+                    new_lambda = 1.0 - (id_std - metric_std) / safe_std
+                    self.ID_LOSS_WEIGHT = (
+                        self.momentum * self.ID_LOSS_WEIGHT
+                        + (1 - self.momentum) * new_lambda
+                    )
 
-            if torch.distributed.is_initialized():
-                w = torch.tensor(self.ID_LOSS_WEIGHT, device=feat.device)
-                torch.distributed.broadcast(w, src=0)
-                self.ID_LOSS_WEIGHT = w.item()
+                if torch.distributed.is_initialized():
+                    w = torch.tensor(self.ID_LOSS_WEIGHT, device=feat.device)
+                    torch.distributed.broadcast(w, src=0)
+                    self.ID_LOSS_WEIGHT = w.item()
 
         total_loss = (
             self.ID_LOSS_WEIGHT * id_loss

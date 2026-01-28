@@ -14,13 +14,14 @@ class CityFlow(BaseImageDataset):
         self.train_dir = osp.join(self.dataset_dir, 'image_train')
         self.train_label_path = osp.join(self.dataset_dir, 'train_label.xml')
 
-        full_train = self._process_dir_xml(self.train_dir, self.train_label_path, is_train=True)
+        full_train, meta = self._process_dir_xml(self.train_dir, self.train_label_path, is_train=True)
         
         train_list, query_list, gallery_list = self._split_train_val(full_train, num_val_ids=validation_split_id)
 
         train = self._relabel(train_list)
         
         
+        self.meta = meta
         self.train = train
         self.query = query_list
         self.gallery = gallery_list
@@ -91,6 +92,7 @@ class CityFlow(BaseImageDataset):
         if items is None: items = root
             
         dataset = []
+        meta = {}
         for obj in items:
             image_name = obj.attrib['imageName']
             img_path = osp.join(img_dir, image_name)
@@ -100,6 +102,28 @@ class CityFlow(BaseImageDataset):
             m = re.findall(r'\d+', cam_raw)
             camid = int(m[0]) if m else 0
             
-            if pid == -1: continue
+            if pid == -1:
+                continue
+
+            track_raw = (
+                obj.attrib.get('trackID')
+                or obj.attrib.get('trackId')
+                or obj.attrib.get('track_id')
+            )
+            ori_raw = (
+                obj.attrib.get('orientation')
+                or obj.attrib.get('vehicleOrientation')
+                or obj.attrib.get('direction')
+            )
+
+            track_id = int(track_raw) if track_raw is not None else -1
+            orientation = int(ori_raw) if ori_raw is not None else -1
+
             dataset.append((img_path, pid, camid))
-        return dataset
+            meta[img_path] = {
+                "pid": pid,
+                "camid": camid,
+                "track_id": track_id,
+                "orientation": orientation,
+            }
+        return dataset, meta

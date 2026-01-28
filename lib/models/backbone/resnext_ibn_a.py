@@ -73,8 +73,6 @@ class ResNeXt(nn.Module):
         self.mixstyle = MixStyle(p=mixstyle_p, alpha=mixstyle_alpha)
         self._init_weights()
 
-        self._init_weights()
-
     def _make_layer(self, block, planes, blocks, baseWidth, cardinality, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:

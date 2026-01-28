@@ -90,8 +90,11 @@ class Baseline(nn.Module):
         self.base = build_backbone(model_name, last_stride)
         
         if pretrain_choice == 'imagenet':
-            self.base.load_param(model_path)
-            print('Loading pretrained ImageNet model......')
+            if model_path:
+                self.base.load_param(model_path)
+                print('Loading pretrained ImageNet model......')
+            else:
+                print('PRETRAIN_CHOICE is imagenet but PRETRAIN_PATH is empty; skipping preload.')
 
         if cfg.MODEL.POOLING_METHOD == 'GeM':
             print('using GeM pooling')
